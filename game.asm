@@ -4,7 +4,8 @@
   .inesmir 1   ; background mirroring
 
 ;;;;;;;;;;;;;;;
-;; VARIABLES ;;
+;VARIABLES ;;;
+;;;;;;;;;;;;;;
   .rsset $0000  ;start variables at ram location 0
 buttons1   .rs 1
 playerXPos .rs 1
@@ -13,8 +14,10 @@ playerSprite .rs 1
 animationCounter .rs 1
 ;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;; ; should split this into another file
+;CONSTANTS ;;;;
 ;;;;;;;;;;;;;;;
-;; CONSTANTS ;;
+;;;buttons;;;;;
 BUTTON_A         = %10000000
 BUTTON_B         = %01000000
 BUTTON_SELECT    = %00100000
@@ -23,10 +26,24 @@ BUTTON_UP        = %00001000
 BUTTON_DOWN      = %00000100
 BUTTON_LEFT      = %00000010
 BUTTON_RIGHT     = %00000001
-
+;;;;;;;;;;;;;;
+;;;other;;;;;;
 MOVE_SPEED       = $02
+;;;;;;;;;;;;;;
+;;;animations;
+ANIM_IDLE		 = $01
+ANIM_WALK		 = $02
+ANIM_DASH		 = $03
+ANIM_JUMP		 = $04
+ANIM_LAND		 = $05
 ;;;;;;;;;;;;;;;
-    
+;;;flags;;;;;;;
+END_OF_SPRITE_DATA = $FE
+;;;;;;;;;;;;;;;
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;
+;PROGRAM SPACE;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
   .bank 0
   .org $C000 
   
@@ -35,45 +52,41 @@ VBlankwWait:
   BPL VBlankwWait
   RTS
 
-;; Read Controller ;;
+;;;Read Controller;;;;;;
 ReadController:
   LDA #$01
   STA $4016
   LDA #$00
   STA $4016
   LDX #$08
-
 ReadControllerLoop:
   LDA $4016
   LSR A           ; bit0 -> Carry
   ROL buttons1     ; bit0 <- Carry
   DEX
   BNE ReadControllerLoop
-  
   RTS
-;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; MoveXLeft ;;
+;;;MoveXLeft;;;;;;;;;;;;
 MoveXLeft:
-	LDX #$00
 	LDA playerXPos
 	SEC
 	SBC #MOVE_SPEED
 	STA playerXPos
 	RTS
-;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; MoveXRight ;;
+;;;MoveXRight;;;;;;;;;;;
 MoveXRight:
-  LDX #$00
   LDA playerXPos
   CLC
   ADC #MOVE_SPEED
   STA playerXPos
   RTS
-;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;
 
-;; MoveYDown ;;
+;;;MoveYDown;;;;;;;;;;;;
 MoveYDown:
   LDX #$00
   LDA playerYPos
@@ -81,224 +94,50 @@ MoveYDown:
   ADC #MOVE_SPEED
   STA playerYPos
   RTS
-;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; MoveYUp ;;
+;;;MoveYUp;;;;;;;;;;;;;;
 MoveYUp:
-  LDX #$00
   LDA playerYPos
   SEC
   SBC #MOVE_SPEED
   STA playerYPos
   RTS
-;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
 
-LoadSprites:
+;;;LoadCurrentCharacterFrame
+LoadCurrentCharacterFrame:
   LDX #$00
   LDY #$00
-LoadSpritesLoop:
-  LDA sprites, x
+LoadCurrentCharacterFrameLoop:
+  LDA frame_dash_1, x
+  CMP #END_OF_SPRITE_DATA
+  BEQ LoadCurrentCharacterFrameComplete
   CLC
   ADC playerYPos
   STA $0200, y
-  
   INX
-  LDA sprites, x
+  LDA frame_dash_1, x
   STA $0201, y
-  
   INX
-  LDA sprites, x
+  LDA frame_dash_1, x
   STA $0202, y
-  
   INX
-  LDA sprites, x 
+  LDA frame_dash_1, x 
   CLC
   ADC playerXPos
   STA $0203, y
-  
   INX
   INY
   INY
   INY
-  INY
-  
-  CPX #$24         
-  BNE LoadSpritesLoop
-  
+  INY           
+  JMP LoadCurrentCharacterFrameLoop
+LoadCurrentCharacterFrameComplete:
   RTS
-  
-LoadSprites2:
-  LDX #$00
-  LDY #$00
-LoadSpritesLoop2:
-  LDA sprites2, x
-  CLC
-  ADC playerYPos
-  STA $0200, y
-  
-  INX
-  LDA sprites2, x
-  STA $0201, y
-  
-  INX
-  LDA sprites2, x
-  STA $0202, y
-  
-  INX
-  LDA sprites2, x 
-  CLC
-  ADC playerXPos
-  STA $0203, y
-  
-  INX
-  INY
-  INY
-  INY
-  INY
-  
-  CPX #$24           
-  BNE LoadSpritesLoop2
-  
-  RTS
-  
-LoadSprites3:
-  LDX #$00
-  LDY #$00
-LoadSpritesLoop3:
-  LDA sprites3, x
-  CLC
-  ADC playerYPos
-  STA $0200, y
-  
-  INX
-  LDA sprites3, x
-  STA $0201, y
-  
-  INX
-  LDA sprites3, x
-  STA $0202, y
-  
-  INX
-  LDA sprites3, x 
-  CLC
-  ADC playerXPos
-  STA $0203, y
-  
-  INX
-  INY
-  INY
-  INY
-  INY
-  
-  CPX #$24              
-  BNE LoadSpritesLoop3
-  
-  RTS
-  
-LoadDash2:
-  LDX #$00
-  LDY #$00
-LoadDashLoop2:
-  LDA dash2, x
-  CLC
-  ADC playerYPos
-  STA $0200, y
-  
-  INX
-  LDA dash2, x
-  STA $0201, y
-  
-  INX
-  LDA dash2, x
-  STA $0202, y
-  
-  INX
-  LDA dash2, x 
-  CLC
-  ADC playerXPos
-  STA $0203, y
-  
-  INX
-  INY
-  INY
-  INY
-  INY
-  
-  CPX #$24              
-  BNE LoadDashLoop2
-  
-  RTS
-  
-LoadDash3:
-  LDX #$00
-  LDY #$00
-LoadDashLoop3:
-  LDA dash3, x
-  CLC
-  ADC playerYPos
-  STA $0200, y
-  
-  INX
-  LDA dash3, x
-  STA $0201, y
-  
-  INX
-  LDA dash3, x
-  STA $0202, y
-  
-  INX
-  LDA dash3, x 
-  CLC
-  ADC playerXPos
-  STA $0203, y
-  
-  INX
-  INY
-  INY
-  INY
-  INY
-  
-  CPX #$24              
-  BNE LoadDashLoop3
-  
-  RTS
-  
-LoadDash1:
-  LDX #$00
-  LDY #$00
-LoadDashLoop1:
-  LDA dash, x
-  CLC
-  ADC playerYPos
-  STA $0200, y
-  
-  INX
-  LDA dash, x
-  STA $0201, y
-  
-  INX
-  LDA dash, x
-  STA $0202, y
-  
-  INX
-  LDA dash, x 
-  CLC
-  ADC playerXPos
-  STA $0203, y
-  
-  INX
-  INY
-  INY
-  INY
-  INY
-  
-  CPX #$28             
-  BNE LoadDashLoop1
-  
-  RTS
-  
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  
+;;;RESET;;;;;;;;;;;;;;;;;;;;;;; 
 RESET:
   SEI          ; disable IRQs
   CLD          ; disable decimal mode
@@ -328,8 +167,7 @@ clrmem:
   BNE clrmem
    
   JSR VBlankwWait
-
-
+  
 LoadPalettes:
   LDA $2002             ; read PPU status to reset the high/low latch
   LDA #$3F
@@ -349,7 +187,7 @@ LoadPalettesLoop:
   BNE LoadPalettesLoop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
                         ; if compare was equal to 32, keep going down
 
-  JSR LoadSprites
+  ;JSR LoadSprites
   ;JSR RenderDash
 
   LDA #%11000000   ; enable NMI, sprites from Pattern Table 1
@@ -357,42 +195,21 @@ LoadPalettesLoop:
 
   LDA #%00010000   ; enable sprites
   STA $2001
-  
-  
 
-Forever:
-  JMP Forever
-  
- 
+;;;Main Loop;;;;;;;;;;;;;;;
+MainLoop:
+  JMP MainLoop
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;NMI;;;;;;;;;;;;;;;;;;;;;
 NMI:
   LDA #$00
   STA $2003       ; set the low byte (00) of the RAM address
   LDA #$02
   STA $4014       ; set the high byte (02) of the RAM address, start the transfer
   
-  ;JSR LoadDash1
-  ;JMP renderComplete
-  
-  LDA playerSprite
-  CMP #$01
-  BEQ renderSprites2
-  CMP #$02
-  BEQ renderSprites3
-  
-  JSR LoadSprites
-  JMP renderComplete
+  JSR LoadCurrentCharacterFrame
 
-renderSprites2:
-  JSR LoadSprites2
-  JMP renderComplete
-  
-renderSprites3:
-  JSR LoadSprites3
-  JMP renderComplete
- 
-  
-renderComplete
   JSR ReadController
   
   LDA buttons1
@@ -422,46 +239,23 @@ ReadUpDone:
   JSR MoveYDown
   
 ReadDownDone:
-
-  LDA animationCounter
-  CLC
-  ADC #$20
-  STA animationCounter
-  
-  CMP #$00
-  BEQ changesprite
-  JMP complete
-  
-changesprite:
-  LDA playerSprite
-  CLC
-  ADC #$01
-  STA playerSprite
-  
-complete:
-
-  LDA playerSprite
-  CLC
-  CMP #$08
-  BNE done
-  LDA #$00
-  STA playerSprite
-  
-done:
+AllDone:
   
   RTI             ; return from interrupt
  
-;;;;;;;;;;;;;;  
-  
-  
-  
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;; ; should split this into another file
+;DATA SPACE;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
   .bank 1
   .org $E000
+  
 palette:
   .db $0F,$24,$36,$2C,$0F,$14,$09,$36,$0F,$14,$09,$36,$0F,$14,$09,$36
   .db $0F,$24,$36,$2C,$0F,$14,$09,$36,$0F,$14,$09,$36,$0F,$14,$09,$36
 
-sprites:
+frame_idle_1:
       ;Y   tile attr  X
   .db $10, $32, $00, $00
   .db $00, $00, $00, $00   
@@ -472,9 +266,9 @@ sprites:
   .db $10, $21, $00, $08
   .db $18, $30, $00, $00
   .db $18, $31, $00, $08
+  .db END_OF_SPRITE_DATA
   
-  
-sprites2:
+frame_idle_2:
       ;Y   tile attr  X
   .db $11, $32, $00, $00
   .db $01, $12, $00, $00   
@@ -485,9 +279,9 @@ sprites2:
   .db $11, $21, $00, $08
   .db $18, $30, $00, $00
   .db $18, $31, $00, $08
+  .db END_OF_SPRITE_DATA
   
-  
-sprites3:
+frame_idle_3:
       ;Y   tile attr  X
   .db $11, $32, $00, $00
   .db $01, $00, $00, $00   
@@ -498,8 +292,35 @@ sprites3:
   .db $11, $21, $00, $08
   .db $18, $30, $00, $00
   .db $18, $31, $00, $08
+  .db END_OF_SPRITE_DATA
   
-dash:
+frame_dash_1:
+      ;Y   tile attr  X
+  .db $15, $32, $00, $09
+  .db $06, $00, $00, $08   
+  .db $06, $01, $00, $10      
+  .db $0B, $16, $00, $01   
+  .db $09, $03, $00, $09   
+  .db $11, $04, $00, $09   
+  .db $0E, $15, $00, $11
+  .db $19, $25, $00, $05
+  .db $18, $35, $00, $0D
+  .db END_OF_SPRITE_DATA
+  
+frame_dash_2:
+      ;Y   tile attr  X
+  .db $15, $05, $00, $10
+  .db $06, $00, $00, $08   
+  .db $06, $01, $00, $10      
+  .db $09, $13, $00, $01   
+  .db $09, $03, $00, $09   
+  .db $11, $04, $00, $09   
+  .db $0E, $34, $00, $11
+  .db $19, $14, $00, $03
+  .db $19, $24, $00, $10
+  .db END_OF_SPRITE_DATA
+  
+frame_dash_3:
       ;Y   tile attr  X
   .db $06, $00, $00, $08   
   .db $06, $01, $00, $10      
@@ -511,40 +332,24 @@ dash:
   .db $0C, $22, $00, $1C
   .db $19, $14, $00, $03
   .db $19, $24, $00, $10
+  .db END_OF_SPRITE_DATA
   
-dash3:
-      ;Y   tile attr  X
-  .db $15, $05, $00, $10
-  .db $06, $00, $00, $08   
-  .db $06, $01, $00, $10      
-  .db $09, $13, $00, $01   
-  .db $09, $03, $00, $09   
-  .db $11, $04, $00, $09   
-  .db $0E, $34, $00, $11
-  .db $19, $14, $00, $03
-  .db $19, $24, $00, $10
-  
-dash2:
-      ;Y   tile attr  X
-  .db $15, $32, $00, $09
-  .db $06, $00, $00, $08   
-  .db $06, $01, $00, $10      
-  .db $0B, $16, $00, $01   
-  .db $09, $03, $00, $09   
-  .db $11, $04, $00, $09   
-  .db $0E, $15, $00, $11
-  .db $19, $25, $00, $05
-  .db $18, $35, $00, $0D
-  
+anim_dash:
+	.dw frame_dash_1
+	.dw frame_dash_2
+	.dw frame_dash_3
+	
+anim_idle:
+	.dw frame_idle_1
+	.dw frame_idle_2
+	.dw frame_idle_3
 
   .org $FFFA     ;first of the three vectors starts here
   .dw NMI                     
   .dw RESET               
   .dw 0
   
-  
-;;;;;;;;;;;;;;  
-  
+;;;;;;;;;;;;;;;;;;;;;;;;;
   
   .bank 2
   .org $0000
