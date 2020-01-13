@@ -10,7 +10,8 @@
 buttons1   .rs 1
 playerXPos .rs 1
 playerYPos .rs 1
-playerSprite .rs 1
+currentAnimationFrame  .rs 2   ; pointer
+animationOffset .rs 1
 animationCounter .rs 1
 ;;;;;;;;;;;;;;;
 
@@ -110,28 +111,28 @@ LoadCurrentCharacterFrame:
   LDX #$00
   LDY #$00
 LoadCurrentCharacterFrameLoop:
-  LDA frame_dash_1, x
+  LDA [currentAnimationFrame], y
   CMP #END_OF_SPRITE_DATA
   BEQ LoadCurrentCharacterFrameComplete
   CLC
   ADC playerYPos
-  STA $0200, y
-  INX
-  LDA frame_dash_1, x
-  STA $0201, y
-  INX
-  LDA frame_dash_1, x
-  STA $0202, y
-  INX
-  LDA frame_dash_1, x 
+  STA $0200, x
+  INY
+  LDA [currentAnimationFrame], y
+  STA $0201, x
+  INY
+  LDA [currentAnimationFrame], y
+  STA $0202, x
+  INY
+  LDA [currentAnimationFrame], y 
   CLC
   ADC playerXPos
-  STA $0203, y
+  STA $0203, x
+  INY
   INX
-  INY
-  INY
-  INY
-  INY           
+  INX
+  INX
+  INX           
   JMP LoadCurrentCharacterFrameLoop
 LoadCurrentCharacterFrameComplete:
   RTS
@@ -189,6 +190,19 @@ LoadPalettesLoop:
 
   ;JSR LoadSprites
   ;JSR RenderDash
+  
+  LDA #$00
+  STA animationCounter
+  STA animationOffset
+  
+  LDX animationOffset
+  LDY #$00
+  LDA anim_dash, x
+  STA currentAnimationFrame, y
+  INX
+  INY
+  LDA anim_dash, x
+  STA currentAnimationFrame, y
 
   LDA #%11000000   ; enable NMI, sprites from Pattern Table 1
   STA $2000
@@ -239,7 +253,34 @@ ReadUpDone:
   JSR MoveYDown
   
 ReadDownDone:
+
+  LDA animationCounter
+  CLC
+  ADC #$01
+  STA animationCounter
+  CMP #$18
+  BNE AllDone
+  LDA #$00
+  STA animationCounter
+  LDA animationOffset
+  CLC
+  ADC #$02
+  CMP #$06
+  BNE SaveAnimationOffset
+  LDA #$00
+SaveAnimationOffset:
+  STA animationOffset
+
 AllDone:
+  
+  LDX animationOffset
+  LDY #$00
+  LDA anim_idle, x
+  STA currentAnimationFrame, y
+  INX
+  INY
+  LDA anim_idle, x
+  STA currentAnimationFrame, y
   
   RTI             ; return from interrupt
  
