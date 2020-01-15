@@ -7,12 +7,17 @@
 ;VARIABLES ;;;
 ;;;;;;;;;;;;;;
   .rsset $0000  ;start variables at ram location 0
+tmp .rs 1
+tmp2 .rs 1
+nmiFinished .rs 1
 buttons1   .rs 1
 playerXPos .rs 1
 playerYPos .rs 1
 currentAnimationFrame  .rs 2   ; pointer
+currentAnimationPointer .rs 2
 animationOffset .rs 1
 animationCounter .rs 1
+
 ;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;; ; should split this into another file
@@ -40,6 +45,9 @@ ANIM_LAND		 = $05
 ;;;;;;;;;;;;;;;
 ;;;flags;;;;;;;
 END_OF_SPRITE_DATA = $FE
+;;;;;;;;;;;;;;;
+;;;general purpose flags
+NMI_FINISHED	 = %00000001
 ;;;;;;;;;;;;;;;
  
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -89,7 +97,6 @@ MoveXRight:
 
 ;;;MoveYDown;;;;;;;;;;;;
 MoveYDown:
-  LDX #$00
   LDA playerYPos
   CLC
   ADC #MOVE_SPEED
@@ -136,6 +143,28 @@ LoadCurrentCharacterFrameLoop:
   JMP LoadCurrentCharacterFrameLoop
 LoadCurrentCharacterFrameComplete:
   RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;PushAll;;;;;;;;;;;;;;;;;;;;;
+PushAll:
+  PHP ; push processor status
+  PHA ; push accumulator
+  TXA
+  PHA 
+  TYA
+  PHA
+  JMP PushAllDone
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;PullAll;;;;;;;;;;;;;;;;;;;;; PushAll in reverse order
+PullAll:
+  PLA ; pull accumulator which should be y now and...
+  TAY ; ...transfer to y
+  PLA
+  TAX 
+  PLA
+  PLP
+  JMP PullAllDone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;RESET;;;;;;;;;;;;;;;;;;;;;;; 
@@ -212,11 +241,26 @@ LoadPalettesLoop:
 
 ;;;Main Loop;;;;;;;;;;;;;;;
 MainLoop:
+
+  LDA tmp
+  clc
+  ADC #$01
+  STA tmp
+  
+WaitForNMIToFinish:
+  LDA nmiFinished
+  CMP #$01
+  BNE WaitForNMIToFinish
+  LDA #$00
+  STA nmiFinished
   JMP MainLoop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;NMI;;;;;;;;;;;;;;;;;;;;;
 NMI:
+  JMP PushAll
+PushAllDone:
+  
   LDA #$00
   STA $2003       ; set the low byte (00) of the RAM address
   LDA #$02
@@ -281,6 +325,16 @@ AllDone:
   INY
   LDA anim_idle, x
   STA currentAnimationFrame, y
+  
+  
+  INC tmp2
+  LDA #$01
+  STA nmiFinished
+  
+  JMP PullAll
+PullAllDone:
+  
+  
   
   RTI             ; return from interrupt
  
