@@ -6,10 +6,7 @@
 ;;;;;;;;;;;;;;;
 ;VARIABLES ;;;
 ;;;;;;;;;;;;;;
-  .rsset $0000  ;start variables at ram location 0
-tmp .rs 1
-tmp2 .rs 1
-nmiFinished .rs 1
+  .rsset $0000  ; start variables at ram location 0
 buttons1   .rs 1
 playerXPos .rs 1
 playerYPos .rs 1
@@ -117,7 +114,7 @@ MoveYUp:
 ;;;LoadCurrentCharacterFrame
 LoadCurrentCharacterFrame:
   LDX #$00
-  LDY #$00
+  LDY #$01 ; skip first byte of frame data - its frame length
 LoadCurrentCharacterFrameLoop:
   LDA [currentAnimationFrame], y
   CMP #END_OF_SPRITE_DATA
@@ -277,7 +274,8 @@ ReadDownDone:
   CLC
   ADC #$01
   STA animationCounter
-  CMP #$18
+  LDY #$00
+  CMP [currentAnimationFrame], y ; first byte is a frame length
   BNE AllDone
   LDA #$00
   STA animationCounter
@@ -351,6 +349,7 @@ palette:
   .db $0F,$24,$36,$2C,$0F,$14,$09,$36,$0F,$14,$09,$36,$0F,$14,$09,$36
 
 frame_idle_1:
+  .db $50 ; frame length (time)
       ;Y   tile attr  X
   .db $10, $32, $00, $00
   .db $00, $00, $00, $00   
@@ -364,6 +363,7 @@ frame_idle_1:
   .db END_OF_SPRITE_DATA
   
 frame_idle_2:
+  .db $10 ; frame length (time)
       ;Y   tile attr  X
   .db $11, $32, $00, $00
   .db $01, $12, $00, $00   
@@ -377,6 +377,7 @@ frame_idle_2:
   .db END_OF_SPRITE_DATA
   
 frame_idle_3:
+  .db $18 ; frame length (time)
       ;Y   tile attr  X
   .db $11, $32, $00, $00
   .db $01, $00, $00, $00   
@@ -390,6 +391,7 @@ frame_idle_3:
   .db END_OF_SPRITE_DATA
   
 frame_dash_1:
+  .db $50 ; frame length (time)
       ;Y   tile attr  X
   .db $15, $32, $00, $09
   .db $06, $00, $00, $08   
@@ -403,6 +405,7 @@ frame_dash_1:
   .db END_OF_SPRITE_DATA
   
 frame_dash_2:
+  .db $50 ; frame length (time)
       ;Y   tile attr  X
   .db $15, $05, $00, $10
   .db $06, $00, $00, $08   
@@ -416,6 +419,7 @@ frame_dash_2:
   .db END_OF_SPRITE_DATA
   
 frame_dash_3:
+  .db $50 ; frame length (time)
       ;Y   tile attr  X
   .db $06, $00, $00, $08   
   .db $06, $01, $00, $10      
