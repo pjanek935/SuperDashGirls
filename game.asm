@@ -149,21 +149,21 @@ LoadCurrentCharacterFrameComplete:
 PushAll:
   PHP ; push processor status
   PHA ; push accumulator
-  TXA
-  PHA 
-  TYA
-  PHA
+  TXA ; tranfer x to accumulator...
+  PHA ; ...and push x
+  TYA ; transfer y to accumulator
+  PHA ; ...and push y
   JMP PushAllDone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;PullAll;;;;;;;;;;;;;;;;;;;;; PushAll in reverse order
 PullAll:
-  PLA ; pull accumulator which should be y now and...
-  TAY ; ...transfer to y
-  PLA
+  PLA ; y
+  TAY
+  PLA ; x
   TAX 
-  PLA
-  PLP
+  PLA ; accumulator
+  PLP ; status
   JMP PullAllDone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -242,32 +242,6 @@ LoadPalettesLoop:
 ;;;Main Loop;;;;;;;;;;;;;;;
 MainLoop:
 
-  LDA tmp
-  clc
-  ADC #$01
-  STA tmp
-  
-WaitForNMIToFinish:
-  LDA nmiFinished
-  CMP #$01
-  BNE WaitForNMIToFinish
-  LDA #$00
-  STA nmiFinished
-  JMP MainLoop
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;NMI;;;;;;;;;;;;;;;;;;;;;
-NMI:
-  JMP PushAll
-PushAllDone:
-  
-  LDA #$00
-  STA $2003       ; set the low byte (00) of the RAM address
-  LDA #$02
-  STA $4014       ; set the high byte (02) of the RAM address, start the transfer
-  
-  JSR LoadCurrentCharacterFrame
-
   JSR ReadController
   
   LDA buttons1
@@ -326,11 +300,31 @@ AllDone:
   LDA anim_idle, x
   STA currentAnimationFrame, y
   
+WaitForNMIToFinish:
+  LDA nmiFinished
+  CMP #$01
+  BNE WaitForNMIToFinish
+  LDA #$00
+  STA nmiFinished
+  JMP MainLoop
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;NMI;;;;;;;;;;;;;;;;;;;;;
+NMI:
+
+  JMP PushAll
+PushAllDone:
   
-  INC tmp2
+  LDA #$00
+  STA $2003       ; set the low byte (00) of the RAM address
+  LDA #$02
+  STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+  
+  JSR LoadCurrentCharacterFrame
+  
   LDA #$01
   STA nmiFinished
-  
+
   JMP PullAll
 PullAllDone:
   
