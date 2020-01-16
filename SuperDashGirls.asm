@@ -17,7 +17,7 @@ currentAnimationFrame  .rs 2   ; pointer
 currentAnimationPointer .rs 2
 animationOffset .rs 1
 animationCounter .rs 1
-
+generalPurposeFlags .rs 1
 ;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;; ; should split this into another file
@@ -34,6 +34,7 @@ BUTTON_LEFT      = %00000010
 BUTTON_RIGHT     = %00000001
 ;;;;;;;;;;;;;;
 ;;;other;;;;;;
+FULL_BYTE 		 = $FF
 MOVE_SPEED       = $02
 ;;;;;;;;;;;;;;
 ;;;animations;
@@ -301,11 +302,15 @@ AllDone:
   STA currentAnimationFrame, y
   
 WaitForNMIToFinish:
-  LDA nmiFinished
-  CMP #$01
-  BNE WaitForNMIToFinish
-  LDA #$00
-  STA nmiFinished
+  LDA generalPurposeFlags
+  AND #NMI_FINISHED
+  BEQ WaitForNMIToFinish
+  
+  LDA #NMI_FINISHED ; set NMI_FINISHED flag back to 0
+  EOR #FULL_BYTE
+  AND generalPurposeFlags
+  STA generalPurposeFlags
+  
   JMP MainLoop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -322,8 +327,9 @@ PushAllDone:
   
   JSR LoadCurrentCharacterFrame
   
-  LDA #$01
-  STA nmiFinished
+  LDA generalPurposeFlags ; set NMI_FINISHED bit to 1
+  ORA #NMI_FINISHED
+  STA generalPurposeFlags 
 
   JMP PullAll
 PullAllDone:

@@ -1,4 +1,4 @@
-; game.asm
+; SuperDashGirls.asm
 LoadPalettes                     = $C0C0
 ReadControllerLoop               = $C012
 LoadCurrentCharacterFrame        = $C045
@@ -12,9 +12,9 @@ LoadCurrentCharacterFrameComple  = $C074
 frame_dash_3                     = $E0D9
 MoveYUp                          = $C03B
 ReadRightDone                    = $C116
-PullAllDone                      = $C185
+PullAllDone                      = $C18D
 ReadDownDone                     = $C12A
-PushAllDone                      = $C170
+PushAllDone                      = $C175
 LoadCurrentCharacterFrameLoop    = $C049
 frame_idle_1                     = $E020
 frame_idle_2                     = $E045
@@ -27,7 +27,7 @@ RESET                            = $C087
 MoveXRight                       = $C027
 VBlankwWait                      = $C000
 WaitForNMIToFinish               = $C15E
-NMI                              = $C16D
+NMI                              = $C172
 MainLoop                         = $C0FF
 SaveAnimationOffset              = $C148
 ReadController                   = $C006
