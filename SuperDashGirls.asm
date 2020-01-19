@@ -15,6 +15,9 @@ currentAnimationPointer .rs 2
 animationOffset .rs 1
 animationCounter .rs 1
 generalPurposeFlags .rs 1
+
+characterState .rs 1
+negVelY .rs 2
 ;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;; ; should split this into another file
@@ -32,7 +35,7 @@ BUTTON_RIGHT     = %00000001
 ;;;;;;;;;;;;;;
 ;;;other;;;;;;
 FULL_BYTE 		 = $FF
-MOVE_SPEED       = $02
+MOVE_SPEED       = $0F
 ;;;;;;;;;;;;;;
 ;;;animations;
 ANIM_IDLE		 = $01
@@ -47,6 +50,9 @@ END_OF_SPRITE_DATA = $FE
 ;;;general purpose flags
 NMI_FINISHED	 = %00000001
 ;;;;;;;;;;;;;;;
+
+STATE_GROUNDED = $00
+STATE_IN_AIR = $01
  
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;PROGRAM SPACE;;;;;;;;;;
@@ -165,6 +171,122 @@ PullAll:
   JMP PullAllDone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;UpdateAnimation;;;;;;;;;;;;
+UpdateAnimation:
+  LDA animationCounter
+  CLC
+  ADC #$01
+  STA animationCounter
+  LDY #$00
+  CMP [currentAnimationFrame], y ; first byte is a frame length
+  BNE UpdateAnimationDone
+  
+  LDA #$00
+  STA animationCounter ; reset animation counter
+  
+  LDA animationOffset ; increase curren animation frame index
+  CLC
+  ADC #$02
+  CMP #$06 ; TODO this should be a parameter
+  BNE SaveAnimationOffset
+  LDA #$00 ; reset current frame index
+SaveAnimationOffset:
+  STA animationOffset
+UpdateAnimationDone:
+
+  LDX animationOffset ; update pointer to current animation frame
+  LDY #$00
+  LDA anim_idle, x
+  STA currentAnimationFrame, y
+  INX
+  INY
+  LDA anim_idle, x
+  STA currentAnimationFrame, y
+
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;UpdateCharacterState;;;;;;;
+UpdateCharacterState:
+  LDA characterState
+  CMP #STATE_IN_AIR
+  BEQ InAirState
+GroundedState:
+  LDA #$00
+  STA negVelY
+  JMP UpdateCharacterStateDone
+InAirState:
+  LDA negVelY
+  CLC
+  ADC #$20
+  STA negVelY
+  LDX #$01
+  LDA negVelY, x
+  ADC #$00
+  STA negVelY, x
+UpdateCharacterStateDone:
+  
+  LDA playerYPos
+  LDX #$01
+  CLC
+  ADC negVelY, x
+  STA playerYPos
+  
+  LDA playerYPos
+  CMP #$B0
+  BCC SetInAirState; branch if less or equal
+SetGroundedState:
+  LDA #STATE_GROUNDED
+  STA characterState
+  LDA #$B0
+  STA playerYPos
+  LDA #$00
+  LDX #$01
+  STA negVelY
+  STA negVelY, x
+  JMP UpdateCharacterStateAllDone
+  
+SetInAirState:
+  LDA #STATE_IN_AIR
+  STA characterState
+  
+UpdateCharacterStateAllDone:
+  
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;UpdateCharacterPos;;;;;;;;
+UpdateCharacterPos:
+  LDA buttons1
+  AND #BUTTON_LEFT
+  BEQ ReadLeftDone
+  JSR MoveXLeft
+  
+ReadLeftDone:
+   
+  LDA buttons1
+  AND #BUTTON_RIGHT
+  BEQ ReadRightDone
+  JSR MoveXRight
+  
+ReadRightDone:
+
+  LDA buttons1
+  AND #BUTTON_UP
+  BEQ ReadUpDone
+  JSR MoveYUp
+  
+ReadUpDone:
+
+  LDA buttons1
+  AND #BUTTON_DOWN
+  BEQ ReadDownDone
+  JSR MoveYDown
+  
+ReadDownDone:
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;RESET;;;;;;;;;;;;;;;;;;;;;;; 
 RESET:
   SEI          ; disable IRQs
@@ -215,8 +337,10 @@ LoadPalettesLoop:
   BNE LoadPalettesLoop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
                         ; if compare was equal to 32, keep going down
 
-  ;JSR LoadSprites
-  ;JSR RenderDash
+  
+  LDA #$80
+  STA playerXPos
+  STA playerYPos
   
   LDA #$00
   STA animationCounter
@@ -241,63 +365,9 @@ LoadPalettesLoop:
 MainLoop:
 
   JSR ReadController
-  
-  LDA buttons1
-  AND #BUTTON_LEFT
-  BEQ ReadLeftDone
-  JSR MoveXLeft
-  
-ReadLeftDone:
-   
-  LDA buttons1
-  AND #BUTTON_RIGHT
-  BEQ ReadRightDone
-  JSR MoveXRight
-  
-ReadRightDone:
-
-  LDA buttons1
-  AND #BUTTON_UP
-  BEQ ReadUpDone
-  JSR MoveYUp
-  
-ReadUpDone:
-
-  LDA buttons1
-  AND #BUTTON_DOWN
-  BEQ ReadDownDone
-  JSR MoveYDown
-  
-ReadDownDone:
-
-  LDA animationCounter
-  CLC
-  ADC #$01
-  STA animationCounter
-  LDY #$00
-  CMP [currentAnimationFrame], y ; first byte is a frame length
-  BNE AllDone
-  LDA #$00
-  STA animationCounter
-  LDA animationOffset
-  CLC
-  ADC #$02
-  CMP #$06
-  BNE SaveAnimationOffset
-  LDA #$00
-SaveAnimationOffset:
-  STA animationOffset
-
-AllDone:
-  
-  LDX animationOffset
-  LDY #$00
-  LDA anim_idle, x
-  STA currentAnimationFrame, y
-  INX
-  INY
-  LDA anim_idle, x
-  STA currentAnimationFrame, y
+  JSR UpdateCharacterPos
+  JSR UpdateAnimation
+  JSR UpdateCharacterState
   
 WaitForNMIToFinish:
   LDA generalPurposeFlags
