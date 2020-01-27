@@ -7,6 +7,10 @@
 ;VARIABLES ;;;
 ;;;;;;;;;;;;;;
   .rsset $0000  ; start variables at ram location 0
+characterState .rs 1
+velY .rs 2
+helpReg .rs 1
+helpReg2 .rs 1
 buttons1   .rs 1
 playerXPos .rs 1
 playerYPos .rs 1
@@ -15,9 +19,6 @@ currentAnimationPointer .rs 2
 animationOffset .rs 1
 animationCounter .rs 1
 generalPurposeFlags .rs 1
-
-characterState .rs 1
-negVelY .rs 2
 ;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;; ; should split this into another file
@@ -35,7 +36,9 @@ BUTTON_RIGHT     = %00000001
 ;;;;;;;;;;;;;;
 ;;;other;;;;;;
 FULL_BYTE 		 = $FF
-MOVE_SPEED       = $0F
+MOVE_SPEED       = $02
+GRAVITY			 = $30
+JUMP_FORCE       = $03
 ;;;;;;;;;;;;;;
 ;;;animations;
 ANIM_IDLE		 = $01
@@ -116,6 +119,24 @@ MoveYUp:
   STA playerYPos
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;Jump;;;;;;;;;;;;;;;;
+Jump:
+  LDA characterState
+  CMP #STATE_IN_AIR
+  BEQ JumpDone
+  LDX #$01
+  LDA #$80
+  SEC
+  SBC #JUMP_FORCE
+  STA velY, x
+  LDA #$80
+  STA velY
+  LDA #STATE_IN_AIR
+  STA characterState
+JumpDone:
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;LoadCurrentCharacterFrame
 LoadCurrentCharacterFrame:
@@ -206,52 +227,72 @@ UpdateAnimationDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;InAirState;;;;;;;;;;;;;;;;;
+InAirState:
+  LDA velY ; add gravity to velocity
+  CLC
+  ADC #$20
+  STA velY
+  LDX #$01
+  LDA velY, x
+  ADC #$00
+  STA velY, x
+; Update Y position
+  CMP #$80
+  BCC SubstractVel ; branch if less or equal
+AddVel:
+  SEC
+  SBC #$80
+  CLC
+  ADC playerYPos
+  STA playerYPos
+  JMP UpdateYPosDone
+SubstractVel:
+  STA helpReg
+  LDA #$80
+  SEC
+  SBC helpReg
+  STA helpReg
+  LDA playerYPos
+  SEC
+  SBC helpReg
+  STA playerYPos
+UpdateYPosDone:
+  CMP #$B0
+  BCC InAirStateDone; jump i less or equal
+  LDA #STATE_GROUNDED
+  STA characterState
+  LDA #$80
+  STA velY
+  STA velY, x
+InAirStateDone:
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;GroundedState;;;;;;;;;;;;;;
+GroundedState:
+  LDA playerYPos
+  CMP #$B0
+  BCC SetInAirState; jump if less or equal
+  JMP GroundedStateDone
+SetInAirState:
+  LDA #STATE_IN_AIR
+  STA characterState
+GroundedStateDone:  
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;UpdateCharacterState;;;;;;;
 UpdateCharacterState:
   LDA characterState
   CMP #STATE_IN_AIR
-  BEQ InAirState
-GroundedState:
-  LDA #$00
-  STA negVelY
-  JMP UpdateCharacterStateDone
-InAirState:
-  LDA negVelY
-  CLC
-  ADC #$20
-  STA negVelY
-  LDX #$01
-  LDA negVelY, x
-  ADC #$00
-  STA negVelY, x
-UpdateCharacterStateDone:
-  
-  LDA playerYPos
-  LDX #$01
-  CLC
-  ADC negVelY, x
-  STA playerYPos
-  
-  LDA playerYPos
-  CMP #$B0
-  BCC SetInAirState; branch if less or equal
-SetGroundedState:
-  LDA #STATE_GROUNDED
-  STA characterState
-  LDA #$B0
-  STA playerYPos
-  LDA #$00
-  LDX #$01
-  STA negVelY
-  STA negVelY, x
+  BEQ GoToInAirState
+GoToGroundedState:
+  JSR GroundedState
   JMP UpdateCharacterStateAllDone
-  
-SetInAirState:
-  LDA #STATE_IN_AIR
-  STA characterState
-  
+GoToInAirState:
+  JSR InAirState
 UpdateCharacterStateAllDone:
-  
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -274,14 +315,14 @@ ReadRightDone:
   LDA buttons1
   AND #BUTTON_UP
   BEQ ReadUpDone
-  JSR MoveYUp
+  JSR Jump
   
 ReadUpDone:
 
   LDA buttons1
   AND #BUTTON_DOWN
   BEQ ReadDownDone
-  JSR MoveYDown
+  JSR Jump
   
 ReadDownDone:
   RTS
@@ -341,10 +382,17 @@ LoadPalettesLoop:
   LDA #$80
   STA playerXPos
   STA playerYPos
+  LDX #$01
+  STA velY
+  STA velY, x
+  
+  LDA #STATE_IN_AIR
+  STA characterState
   
   LDA #$00
   STA animationCounter
   STA animationOffset
+  STA helpReg
   
   LDX animationOffset
   LDY #$00
