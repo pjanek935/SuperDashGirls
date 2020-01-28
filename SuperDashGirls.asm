@@ -8,6 +8,7 @@
 ;;;;;;;;;;;;;;
   .rsset $0000  ; start variables at ram location 0
 characterState .rs 1
+direction .rs 1
 velY .rs 2
 helpReg .rs 1
 helpReg2 .rs 1
@@ -53,10 +54,10 @@ END_OF_SPRITE_DATA = $FE
 ;;;general purpose flags
 NMI_FINISHED	 = %00000001
 ;;;;;;;;;;;;;;;
-
 STATE_GROUNDED = $00
 STATE_IN_AIR = $01
- 
+DIRECTION_RIGHT = $00
+DIRECTION_LEFT = $01
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;PROGRAM SPACE;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -90,6 +91,8 @@ MoveXLeft:
 	SEC
 	SBC #MOVE_SPEED
 	STA playerXPos
+	LDA #DIRECTION_LEFT
+    STA direction
 	RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -99,6 +102,8 @@ MoveXRight:
   CLC
   ADC #MOVE_SPEED
   STA playerXPos
+  LDA #DIRECTION_RIGHT
+  STA direction
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -153,13 +158,27 @@ LoadCurrentCharacterFrameLoop:
   LDA [currentAnimationFrame], y
   STA $0201, x
   INY
-  LDA [currentAnimationFrame], y
+  LDA direction
+  CMP #DIRECTION_RIGHT
+  BEQ directionRight
+directionLeft:
+  LDA #%01000000
   STA $0202, x
   INY
-  LDA [currentAnimationFrame], y 
+  LDA playerXPos
+  SEC
+  SBC [currentAnimationFrame], y
+  STA $0203, x
+  JMP directionDone
+directionRight:
+  LDA #%00000000
+  STA $0202, x
+  INY
+  LDA [currentAnimationFrame], y
   CLC
   ADC playerXPos
   STA $0203, x
+directionDone:
   INY
   INX
   INX
