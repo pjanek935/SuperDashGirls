@@ -9,6 +9,7 @@
   .rsset $0000  ; start variables at ram location 0
 characterState .rs 1
 direction .rs 1
+dashDirection .rs 1
 velY .rs 2
 helpReg .rs 1
 helpReg2 .rs 1
@@ -35,7 +36,18 @@ BUTTON_DOWN      = %00000100
 BUTTON_LEFT      = %00000010
 BUTTON_RIGHT     = %00000001
 ;;;;;;;;;;;;;;
-;;;other;;;;;;
+;;;dash;;;;;;
+DD_RIGHT = %00000001
+DD_LOWER_RIGHT = %00000101
+DD_DOWN = %00000100
+DD_LOWER_LEFT = %00000110
+DD_LEFT = %00000010
+DD_UPPER_LEFT = %00001010
+DD_UP = %00001000
+DD_UPPER_RIGHT = %00001001
+DD_MASK =  %00001111
+;;;;;;;;;;;;;;
+;;;others;;;;;
 FULL_BYTE 		 = $FF
 MOVE_SPEED       = $02
 GRAVITY			 = $30
@@ -56,6 +68,7 @@ NMI_FINISHED	 = %00000001
 ;;;;;;;;;;;;;;;
 STATE_GROUNDED = $00
 STATE_IN_AIR = $01
+STATE_DASH = $02
 DIRECTION_RIGHT = $00
 DIRECTION_LEFT = $01
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -64,10 +77,12 @@ DIRECTION_LEFT = $01
   .bank 0
   .org $C000 
   
+;;;VBlankWait;;;;;;;;;;;
 VBlankwWait:
   BIT $2002
   BPL VBlankwWait
   RTS
+;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;Read Controller;;;;;;
 ReadController:
@@ -85,25 +100,49 @@ ReadControllerLoop:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;Dash;;;;;;;;;;;;;;;;;
+Dash:
+  LDA characterState
+  CMP #STATE_DASH
+  BEQ DashDone
+  LDA buttons1
+  AND DD_MASK
+  STA dashDirection
+  CMP #$00
+  BEQ DashDone ; if no direction button is pressed - exit
+  LDA #STATE_DASH
+  STA characterState
+DashDone:
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;MoveXLeft;;;;;;;;;;;;
 MoveXLeft:
-	LDA playerXPos
-	SEC
-	SBC #MOVE_SPEED
-	STA playerXPos
-	LDA #DIRECTION_LEFT
-    STA direction
-	RTS
+  LDA characterState
+  CMP #STATE_DASH
+  BEQ MoveXLeftDone
+  LDA playerXPos
+  SEC
+  SBC #MOVE_SPEED
+  STA playerXPos
+  LDA #DIRECTION_LEFT
+  STA direction
+MoveXLeftDone:
+  RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;MoveXRight;;;;;;;;;;;
 MoveXRight:
+  LDA characterState
+  CMP #STATE_DASH
+  BEQ MoveXRightDone
   LDA playerXPos
   CLC
   ADC #MOVE_SPEED
   STA playerXPos
   LDA #DIRECTION_RIGHT
   STA direction
+MoveXRightDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -306,8 +345,13 @@ UpdateCharacterState:
   LDA characterState
   CMP #STATE_IN_AIR
   BEQ GoToInAirState
-GoToGroundedState:
+  LDA characterState
+  CMP #STATE_DASH
+  BEQ GoToDashState
   JSR GroundedState
+  JMP UpdateCharacterStateAllDone
+GoToDashState:
+  NOP
   JMP UpdateCharacterStateAllDone
 GoToInAirState:
   JSR InAirState
@@ -344,6 +388,13 @@ ReadUpDone:
   JSR Jump
   
 ReadDownDone:
+
+  LDA buttons1
+  AND #BUTTON_A
+  BEQ ReadADone
+  JSR Dash
+  
+ReadADone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
