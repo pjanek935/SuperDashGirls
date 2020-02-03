@@ -8,6 +8,7 @@
 ;;;;;;;;;;;;;;
   .rsset $0000  ; start variables at ram location 0
 characterState .rs 1
+dashCounter .rs 1
 direction .rs 1
 dashDirection .rs 1
 velY .rs 2
@@ -106,12 +107,16 @@ Dash:
   CMP #STATE_DASH
   BEQ DashDone
   LDA buttons1
-  AND DD_MASK
+  AND #DD_MASK
   STA dashDirection
   CMP #$00
   BEQ DashDone ; if no direction button is pressed - exit
   LDA #STATE_DASH
   STA characterState
+  LDA #$80
+  LDX #$01
+  STA velY
+  STA velY, x
 DashDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -331,13 +336,50 @@ InAirStateDone:
 GroundedState:
   LDA playerYPos
   CMP #$B0
-  BCC SetInAirState; jump if less or equal
+  BCC SetInAirState ; jump if less or equal
   JMP GroundedStateDone
 SetInAirState:
   LDA #STATE_IN_AIR
   STA characterState
 GroundedStateDone:  
   RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+DashState:
+  LDA dashCounter
+  CLC
+  ADC #$01
+  CMP #$0A
+  STA dashCounter
+  BNE ContinueDash
+ExitDash:
+  LDA #$00
+  STA dashCounter
+  LDA #STATE_IN_AIR
+  STA characterState
+  JMP DashComplete
+ContinueDash:
+  LDA dashDirection
+  CMP #DD_RIGHT
+  BEQ DashRight
+  LDA dashDirection
+  CMP #DD_LEFT
+  BEQ DashLeft
+  JMP ExitDash
+DashLeft:
+  LDA playerXPos
+  SEC
+  SBC #$07
+  STA playerXPos
+  JMP DashComplete
+DashRight:
+  LDA playerXPos
+  CLC
+  ADC #$07
+  STA playerXPos
+DashComplete:
+  RTS
+;;;DashState;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;UpdateCharacterState;;;;;;;
@@ -351,7 +393,7 @@ UpdateCharacterState:
   JSR GroundedState
   JMP UpdateCharacterStateAllDone
 GoToDashState:
-  NOP
+  JSR DashState
   JMP UpdateCharacterStateAllDone
 GoToInAirState:
   JSR InAirState
