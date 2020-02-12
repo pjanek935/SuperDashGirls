@@ -271,7 +271,7 @@ UpdateAnimation:
   LDA animationOffset ; increase curren animation frame index
   CLC
   ADC #$02
-  CMP #$06 ; TODO this should be a parameter
+  CMP #$08 ; TODO this should be a parameter
   BNE SaveAnimationOffset
   LDA #$00 ; reset current frame index
 SaveAnimationOffset:
@@ -280,11 +280,11 @@ UpdateAnimationDone:
 
   LDX animationOffset ; update pointer to current animation frame
   LDY #$00
-  LDA anim_idle, x
+  LDA anim_run, x
   STA currentAnimationFrame, y
   INX
   INY
-  LDA anim_idle, x
+  LDA anim_run, x
   STA currentAnimationFrame, y
 
   RTS
@@ -663,6 +663,42 @@ frame_dash_3:
   .db $19, $24, $00, $10
   .db END_OF_SPRITE_DATA
   
+frame_run_1:
+  .db $0F ; frame length (time)
+      ;Y   tile attr  X
+  .db $0F, $32, $00, $02
+  .db $00, $40, $00, $06
+  .db $08, $50, $00, $06   
+  .db $0F, $60, $00, $06  
+  .db $12, $42, $00, $0A 
+  .db $10, $52, $00, $00  
+  .db $07, $62, $00, $0D
+  .db END_OF_SPRITE_DATA
+  
+frame_run_2:
+  .db $08 ; frame length (time)
+      ;Y   tile attr  X
+  .db $10, $32, $00, $02
+  .db $01, $40, $00, $06
+  .db $09, $50, $00, $06   
+  .db $10, $60, $00, $06  
+  .db $13, $41, $00, $07 
+  .db $0D, $51, $00, $04  
+  .db $15, $61, $00, $04  
+  .db END_OF_SPRITE_DATA
+  
+frame_run_3:
+  .db $0F ; frame length (time)
+      ;Y   tile attr  X
+  .db $0F, $32, $00, $02
+  .db $00, $40, $00, $06
+  .db $08, $50, $00, $06   
+  .db $0F, $60, $00, $06  
+  .db $12, $42, $00, $0A 
+  .db $10, $52, $00, $00  
+  .db $07, $70, $00, $00 
+  .db END_OF_SPRITE_DATA
+  
 anim_dash:
 	.dw frame_dash_1
 	.dw frame_dash_2
@@ -672,6 +708,13 @@ anim_idle:
 	.dw frame_idle_1
 	.dw frame_idle_2
 	.dw frame_idle_3
+	
+anim_run:
+	.dw frame_run_1
+	.dw frame_run_2
+	.dw frame_run_3
+	.dw frame_run_2
+
 
   .org $FFFA     ;first of the three vectors starts here
   .dw NMI                     
