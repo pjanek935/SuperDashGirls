@@ -7,6 +7,7 @@
 ;VARIABLES ;;;
 ;;;;;;;;;;;;;;
   .rsset $0000  ; start variables at ram location 0
+currentAnimationPointer .rs 2  ; pointer
 characterState .rs 1
 dashCounter .rs 1
 direction .rs 1
@@ -18,7 +19,7 @@ buttons1   .rs 1
 playerXPos .rs 1
 playerYPos .rs 1
 currentAnimationFrame  .rs 2   ; pointer
-currentAnimationPointer .rs 2
+animationFrameCount .rs 1
 animationOffset .rs 1
 animationCounter .rs 1
 generalPurposeFlags .rs 1
@@ -255,6 +256,34 @@ PullAll:
   JMP PullAllDone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;Set Run Animation;;;;;;;;;;;;;;
+SetRunAnimation:
+  LDX #$00
+  LDY #$00
+  LDA #LOW (anim_run)
+  STA currentAnimationPointer, x
+  INX
+  LDA #HIGH (anim_run)
+  STA currentAnimationPointer, x
+  LDA #$08
+  STA animationFrameCount
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;Set Idle Animation;;;;;;;;;;;;;;
+SetIdleAnimation:
+  LDX #$00
+  LDY #$00
+  LDA #LOW (anim_idle)
+  STA currentAnimationPointer, x
+  INX
+  LDA #HIGH (anim_idle)
+  STA currentAnimationPointer, x
+  LDA #$06
+  STA animationFrameCount
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;UpdateAnimation;;;;;;;;;;;;
 UpdateAnimation:
   LDA animationCounter
@@ -271,21 +300,21 @@ UpdateAnimation:
   LDA animationOffset ; increase curren animation frame index
   CLC
   ADC #$02
-  CMP #$08 ; TODO this should be a parameter
+  CMP animationFrameCount ; TODO this should be a parameter
   BNE SaveAnimationOffset
   LDA #$00 ; reset current frame index
 SaveAnimationOffset:
   STA animationOffset
 UpdateAnimationDone:
 
-  LDX animationOffset ; update pointer to current animation frame
-  LDY #$00
-  LDA anim_run, x
-  STA currentAnimationFrame, y
+  LDY animationOffset ; update pointer to current animation frame
+  LDX #$00
+  LDA [currentAnimationPointer], y
+  STA currentAnimationFrame, x
   INX
   INY
-  LDA anim_run, x
-  STA currentAnimationFrame, y
+  LDA [currentAnimationPointer], y
+  STA currentAnimationFrame, x
 
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -506,14 +535,18 @@ LoadPalettesLoop:
   STA animationOffset
   STA helpReg
   
-  LDX animationOffset
-  LDY #$00
-  LDA anim_dash, x
-  STA currentAnimationFrame, y
-  INX
-  INY
-  LDA anim_dash, x
-  STA currentAnimationFrame, y
+  ;LDX animationOffset
+ ;LDY #$00
+  ;LDA anim_dash, x
+  ;STA currentAnimationFrame, y
+  ;INX
+  ;INY
+  ;LDA anim_dash, x
+  ;STA currentAnimationFrame, y
+  
+  ;JSR SetRunAnimation
+  JSR SetIdleAnimation
+  
 
   LDA #%11000000   ; enable NMI, sprites from Pattern Table 1
   STA $2000
