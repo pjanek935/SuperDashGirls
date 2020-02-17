@@ -7,6 +7,7 @@
 ;VARIABLES ;;;
 ;;;;;;;;;;;;;;
   .rsset $0000  ; start variables at ram location 0
+currentAnimationType .rs 1
 currentAnimationPointer .rs 2  ; pointer
 characterState .rs 1
 dashCounter .rs 1
@@ -258,6 +259,9 @@ PullAll:
 
 ;;;;Set Run Animation;;;;;;;;;;;;;;
 SetRunAnimation:
+  LDA currentAnimationType
+  CMP #ANIM_WALK
+  BEQ SetRunAnimationDone
   LDX #$00
   LDY #$00
   LDA #LOW (anim_run)
@@ -267,11 +271,20 @@ SetRunAnimation:
   STA currentAnimationPointer, x
   LDA #$08
   STA animationFrameCount
+  LDA #$00
+  STA animationCounter
+  STA animationOffset
+  LDA #ANIM_WALK
+  STA currentAnimationType
+SetRunAnimationDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;Set Idle Animation;;;;;;;;;;;;;;
 SetIdleAnimation:
+  LDA currentAnimationType
+  CMP #ANIM_IDLE
+  BEQ SetIdleAnimationDone
   LDX #$00
   LDY #$00
   LDA #LOW (anim_idle)
@@ -281,6 +294,12 @@ SetIdleAnimation:
   STA currentAnimationPointer, x
   LDA #$06
   STA animationFrameCount
+  LDA #$00
+  STA animationCounter
+  STA animationOffset
+  LDA #ANIM_IDLE
+  STA currentAnimationType
+SetIdleAnimationDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -363,6 +382,16 @@ InAirStateDone:
 
 ;;;GroundedState;;;;;;;;;;;;;;
 GroundedState:
+  LDA #BUTTON_LEFT
+  ORA #BUTTON_RIGHT
+  AND buttons1
+  CMP #$00
+  BEQ GroundStateSetIdleAnimation
+  JSR SetRunAnimation
+  JMP GroundStateChangeAnimationDone
+GroundStateSetIdleAnimation:
+  JSR SetIdleAnimation
+GroundStateChangeAnimationDone:
   LDA playerYPos
   CMP #$B0
   BCC SetInAirState ; jump if less or equal
@@ -612,7 +641,7 @@ palette:
   .db $0F,$24,$36,$2C,$0F,$14,$09,$36,$0F,$14,$09,$36,$0F,$14,$09,$36
 
 frame_idle_1:
-  .db $50 ; frame length (time)
+  .db $30 ; frame length (time)
       ;Y   tile attr  X
   .db $10, $32, $00, $00
   .db $00, $00, $00, $00   
@@ -640,7 +669,7 @@ frame_idle_2:
   .db END_OF_SPRITE_DATA
   
 frame_idle_3:
-  .db $18 ; frame length (time)
+  .db $14 ; frame length (time)
       ;Y   tile attr  X
   .db $11, $32, $00, $00
   .db $01, $00, $00, $00   
@@ -712,7 +741,7 @@ frame_run_2:
   .db $08 ; frame length (time)
       ;Y   tile attr  X
   .db $10, $32, $00, $02
-  .db $01, $40, $00, $06
+  .db $01, $71, $00, $06
   .db $09, $50, $00, $06   
   .db $10, $60, $00, $06  
   .db $13, $41, $00, $07 
