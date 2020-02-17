@@ -60,8 +60,9 @@ JUMP_FORCE       = $03
 ANIM_IDLE		 = $01
 ANIM_WALK		 = $02
 ANIM_DASH		 = $03
-ANIM_JUMP		 = $04
-ANIM_LAND		 = $05
+ANIM_JUMP_UP 	 = $04
+ANIM_JUMP_DOWN 	 = $05
+ANIM_LAND		 = $06
 ;;;;;;;;;;;;;;;
 ;;;flags;;;;;;;
 END_OF_SPRITE_DATA = $FE
@@ -185,6 +186,7 @@ Jump:
   STA velY
   LDA #STATE_IN_AIR
   STA characterState
+  JSR SetJumpUpAnimation
 JumpDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -303,6 +305,29 @@ SetIdleAnimationDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;Set Jump Up Animation;;;;;;;;;;;;;;
+SetJumpUpAnimation:
+  LDA currentAnimationType
+  CMP #ANIM_JUMP_UP
+  BEQ SetJumpUpAnimationDone
+  LDX #$00
+  LDY #$00
+  LDA #LOW (anim_jump_up)
+  STA currentAnimationPointer, x
+  INX
+  LDA #HIGH (anim_jump_up)
+  STA currentAnimationPointer, x
+  LDA #$06
+  STA animationFrameCount
+  LDA #$00
+  STA animationCounter
+  STA animationOffset
+  LDA #ANIM_JUMP_UP
+  STA currentAnimationType
+SetJumpUpAnimationDone:
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;UpdateAnimation;;;;;;;;;;;;
 UpdateAnimation:
   LDA animationCounter
@@ -376,6 +401,7 @@ UpdateYPosDone:
   LDA #$80
   STA velY
   STA velY, x
+  JSR SetIdleAnimation
 InAirStateDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -399,6 +425,7 @@ GroundStateChangeAnimationDone:
 SetInAirState:
   LDA #STATE_IN_AIR
   STA characterState
+  JSR SetJumpUpAnimation
 GroundedStateDone:  
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -761,6 +788,21 @@ frame_run_3:
   .db $07, $70, $00, $00 
   .db END_OF_SPRITE_DATA
   
+frame_jump_up_1:
+  .db $30 ; frame length (time)
+      ;Y   tile attr  X
+  .db $10, $32, $00, $00
+  .db $00, $00, $00, $00   
+  .db $00, $01, $00, $08   
+  .db $08, $10, $00, $00   
+  .db $08, $11, $00, $08   
+  .db $10, $44, $00, $00   
+  .db $10, $45, $00, $05
+  .db $18, $54, $00, $00
+  .db $18, $55, $00, $05
+  .db $02, $43, $00, $0B
+  .db END_OF_SPRITE_DATA
+  
 anim_dash:
 	.dw frame_dash_1
 	.dw frame_dash_2
@@ -776,6 +818,11 @@ anim_run:
 	.dw frame_run_2
 	.dw frame_run_3
 	.dw frame_run_2
+	
+anim_jump_up:
+	.dw frame_jump_up_1
+	.dw frame_jump_up_1
+	.dw frame_jump_up_1
 
 
   .org $FFFA     ;first of the three vectors starts here
