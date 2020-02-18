@@ -789,18 +789,47 @@ frame_run_3:
   .db END_OF_SPRITE_DATA
   
 frame_jump_up_1:
-  .db $30 ; frame length (time)
+  .db $08 ; frame length (time)
       ;Y   tile attr  X
   .db $10, $32, $00, $00
   .db $00, $00, $00, $00   
-  .db $00, $01, $00, $08   
+  .db $00, $53, $00, $08   
   .db $08, $10, $00, $00   
   .db $08, $11, $00, $08   
   .db $10, $44, $00, $00   
   .db $10, $45, $00, $05
   .db $18, $54, $00, $00
   .db $18, $55, $00, $05
+  .db END_OF_SPRITE_DATA
+  
+frame_jump_up_2:
+  .db $08 ; frame length (time)
+      ;Y   tile attr  X
+  .db $10, $32, $00, $00
+  .db $00, $12, $00, $00   
+  .db $00, $01, $00, $08   
+  .db $08, $10, $00, $00   
+  .db $08, $11, $00, $08   
+  .db $10, $44, $00, $00   
+  .db $10, $45, $00, $05
+  .db $18, $54, $00, $00
+  .db $16, $55, $00, $05
   .db $02, $43, $00, $0B
+  .db END_OF_SPRITE_DATA
+  
+frame_jump_up_3:
+  .db $30 ; frame length (time)
+      ;Y   tile attr  X
+  .db $10, $32, $00, $00
+  .db $00, $12, $00, $00   
+  .db $00, $01, $00, $08   
+  .db $08, $10, $00, $00   
+  .db $08, $11, $00, $08   
+  .db $10, $44, $00, $00   
+  .db $10, $45, $00, $05
+  .db $18, $54, $00, $00
+  .db $16, $55, $00, $05
+  .db $03, $43, $00, $0A
   .db END_OF_SPRITE_DATA
   
 anim_dash:
@@ -821,8 +850,8 @@ anim_run:
 	
 anim_jump_up:
 	.dw frame_jump_up_1
-	.dw frame_jump_up_1
-	.dw frame_jump_up_1
+	.dw frame_jump_up_2
+	.dw frame_jump_up_3
 
 
   .org $FFFA     ;first of the three vectors starts here
