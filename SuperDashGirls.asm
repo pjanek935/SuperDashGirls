@@ -55,6 +55,8 @@ FULL_BYTE 		 = $FF
 MOVE_SPEED       = $02
 GRAVITY			 = $30
 JUMP_FORCE       = $03
+DASH_SPEED       = $06
+DASH_DURATION    = $0F
 ;;;;;;;;;;;;;;
 ;;;animations;
 ANIM_IDLE		 = $01
@@ -120,6 +122,7 @@ Dash:
   LDX #$01
   STA velY
   STA velY, x
+  JSR SetDashAnimation
 DashDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -234,6 +237,13 @@ directionDone:
   INX           
   JMP LoadCurrentCharacterFrameLoop
 LoadCurrentCharacterFrameComplete:
+ClearGraphicsMemLoop:
+  LDA #$00
+  STA $0200, x
+  INX
+  TXA
+  CMP #$AF
+  BNE ClearGraphicsMemLoop
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -302,6 +312,29 @@ SetIdleAnimation:
   LDA #ANIM_IDLE
   STA currentAnimationType
 SetIdleAnimationDone:
+  RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;Set Dash Animation;;;;;;;;;;;;;;
+SetDashAnimation:
+  LDA currentAnimationType
+  CMP #ANIM_DASH
+  BEQ SetDashAnimationDone
+  LDX #$00
+  LDY #$00
+  LDA #LOW (anim_dash)
+  STA currentAnimationPointer, x
+  INX
+  LDA #HIGH (anim_dash)
+  STA currentAnimationPointer, x
+  LDA #$06
+  STA animationFrameCount
+  LDA #$00
+  STA animationCounter
+  STA animationOffset
+  LDA #ANIM_DASH
+  STA currentAnimationType
+SetDashAnimationDone:
   RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -433,7 +466,7 @@ DashState:
   LDA dashCounter
   CLC
   ADC #$01
-  CMP #$0A
+  CMP #DASH_DURATION
   STA dashCounter
   BNE ContinueDash
 ExitDash:
@@ -453,13 +486,13 @@ ContinueDash:
 DashLeft:
   LDA playerXPos
   SEC
-  SBC #$07
+  SBC #DASH_SPEED
   STA playerXPos
   JMP DashComplete
 DashRight:
   LDA playerXPos
   CLC
-  ADC #$07
+  ADC #DASH_SPEED
   STA playerXPos
 DashComplete:
   RTS
@@ -710,7 +743,7 @@ frame_idle_3:
   .db END_OF_SPRITE_DATA
   
 frame_dash_1:
-  .db $50 ; frame length (time)
+  .db $03 ; frame length (time)
       ;Y   tile attr  X
   .db $15, $32, $00, $09
   .db $06, $00, $00, $08   
@@ -724,7 +757,7 @@ frame_dash_1:
   .db END_OF_SPRITE_DATA
   
 frame_dash_2:
-  .db $50 ; frame length (time)
+  .db $03 ; frame length (time)
       ;Y   tile attr  X
   .db $15, $05, $00, $10
   .db $06, $00, $00, $08   
@@ -791,15 +824,16 @@ frame_run_3:
 frame_jump_up_1:
   .db $08 ; frame length (time)
       ;Y   tile attr  X
-  .db $10, $32, $00, $00
-  .db $00, $00, $00, $00   
-  .db $00, $53, $00, $08   
-  .db $08, $10, $00, $00   
-  .db $08, $11, $00, $08   
-  .db $10, $44, $00, $00   
-  .db $10, $45, $00, $05
-  .db $18, $54, $00, $00
-  .db $18, $55, $00, $05
+  .db $12, $32, $00, $00
+  .db $02, $00, $00, $00   
+  .db $02, $53, $00, $08   
+  .db $0A, $10, $00, $00   
+  .db $0A, $11, $00, $08   
+  .db $0F, $44, $00, $00   
+  .db $0F, $45, $00, $05
+  .db $17, $54, $00, $00
+  .db $17, $55, $00, $05
+  .db $01, $43, $00, $0B
   .db END_OF_SPRITE_DATA
   
 frame_jump_up_2:
@@ -852,7 +886,6 @@ anim_jump_up:
 	.dw frame_jump_up_1
 	.dw frame_jump_up_2
 	.dw frame_jump_up_3
-
 
   .org $FFFA     ;first of the three vectors starts here
   .dw NMI                     
